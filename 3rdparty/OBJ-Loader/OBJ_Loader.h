@@ -22,8 +22,8 @@
 
 // Namespace: OBJL
 //
-// Description: The namespace that holds eveyrthing that
-//	is needed and used for the OBJ Model Loader
+// Description: The namespace that holds everything that
+//is needed and used for the OBJ Model Loader
 namespace objl
 {
 	// Structure: Vector2
@@ -556,7 +556,7 @@ namespace objl
 
 					std::vector<unsigned int> iIndices;
 
-					VertexTriangluation(iIndices, vVerts);
+					VertexTriangulation(iIndices, vVerts);
 
 					// Add Indices
 					for (int i = 0; i < int(iIndices.size()); i++)
@@ -801,7 +801,7 @@ namespace objl
 
 		// Triangulate a list of vertices into a face by printing
 		//	inducies corresponding with triangles within it
-		void VertexTriangluation(std::vector<unsigned int>& oIndices,
+		void VertexTriangulation(std::vector<unsigned int>& oIndices,
 			const std::vector<Vertex>& iVerts)
 		{
 			// If there are 2 or less verts,
