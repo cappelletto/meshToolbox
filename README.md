@@ -23,7 +23,7 @@ Each module contains information describing its usage, with (usually) some usefu
 The current release has been developed and tested in Ubuntu 16.04 LTS 64 bits.
 
 - [cmake 2.8](https://cmake.org/) - cmake making it happen again
-- [OBJ-Loader](https://github.com/) - OBJ Loading header file, released under MIT license.
+- [OBJ-Loader](https://github.com/Bly7/OBJ-Loader) - OBJ Loading header file, released under MIT license.
 
 ## Getting Started
 
