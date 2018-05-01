@@ -3,7 +3,7 @@
 
 // OBJ_Loader - .obj Loader
 #include "../3rdparty/OBJ-Loader/OBJ_Loader.h"
-#include "../include/options.h"
+#include "../include/objLoad.h"
 
 using namespace std;
 
@@ -14,11 +14,11 @@ int main(int argc, char* argv[])
 //*********************************************************************************
 /*	PARSER section */
     string descriptionString = \
-    "objLoad - testing module which loads and dump an OBJ mesh file.\
+    "objLoad - testing module part of meshToolbox, which loads and dumps an OBJ mesh file.\
     Based on 3rd party OBJ-Load library (see README.md).";
 
     argParser.Description(descriptionString);
-    argParser.Epilog("Author: J. Cappelletto (GitHub: @cappelletto)\nVisit [https://github.com/cappelletto] for more information\n");
+    argParser.Epilog("Author: J. Cappelletto (cappelletto [at] gmail [dot] com)\nVisit [https://github.com/cappelletto] for more information\n");
     argParser.Prog(argv[0]);
     argParser.helpParams.width = 120;
 
@@ -66,8 +66,6 @@ int main(int argc, char* argv[])
 	//-------------------------------------------------------------------------------------------------------------	
 	// Initialize Loader object
 	objl::Loader Loader;
-
-	// Load .OBJ File
 	bool loadout = Loader.LoadFile(InputFile);
 
 	// Check to see if it loaded correctly
@@ -76,68 +74,65 @@ int main(int argc, char* argv[])
 		cout << "Unable to open: " << InputFile << endl;
 		return -1;
 	}
-
 	// If so continue
 	else
 	{
 		// Create/Open OutputFile
 		std::ofstream file(OutputFile);
+		cout << "Number of meshes: " << Loader.LoadedMeshes.size() << endl; 
 
 		// Go through each loaded mesh and out its contents
 		for (int i = 0; i < Loader.LoadedMeshes.size(); i++)
 		{
 			// Copy one of the loaded meshes to be our current mesh
 			objl::Mesh curMesh = Loader.LoadedMeshes[i];
-
 			// Print Mesh Name
-			file << "Mesh " << i << ": " << curMesh.MeshName << "\n";
-
+			cout << "\tCurrent mesh: " << curMesh.MeshName << endl;
 			// Print Vertices
-			file << "Vertices:\n";
+			cout << "\t\tVertices: " << curMesh.Vertices.size() << endl;
 
-			// Go through each vertex and print its number,
-			//  position (P[3]), normal (N[3]), and texture coordinate (TC[2])
-			for (int j = 0; j < curMesh.Vertices.size(); j++)
-			{
-				file << "V" << j << ": " <<
-					"P(" << curMesh.Vertices[j].Position.X << ", " << curMesh.Vertices[j].Position.Y << ", " << curMesh.Vertices[j].Position.Z << ") " <<
-					"N(" << curMesh.Vertices[j].Normal.X << ", " << curMesh.Vertices[j].Normal.Y << ", " << curMesh.Vertices[j].Normal.Z << ") " <<
-					"TC(" << curMesh.Vertices[j].TextureCoordinate.X << ", " << curMesh.Vertices[j].TextureCoordinate.Y << ")\n";
-			}
+			int nFaces = curMesh.Indices.size()/3;
+			// Print Indices (number of faces)
+			cout << "\t\tFaces: " << nFaces << endl;
 
-			// Print Indices
-			file << "Indices:\n";
+			// Create a vector that will contain the area of each face (triangle)
+			vector <float> faceArea(nFaces);
+			vector <objl::Vector3> faceNormal(nFaces);
+			vector <float> faceAngle(nFaces);			
 
 			// Go through every 3rd index and print the
 			//	triangle that these indices represent
-			for (int j = 0; j < curMesh.Indices.size(); j += 3)
+			for (int j = 0; j < nFaces; j++)
 			{
-				file << "T" << j / 3 << ": " << curMesh.Indices[j] << ", " << curMesh.Indices[j + 1] << ", " << curMesh.Indices[j + 2] << "\n";
+				// faces are defined counter-clockwise
+				objl::Vector3 A, B, C, U, V;
+
+				A = curMesh.Vertices[curMesh.Indices[3*j]].Position;
+				B = curMesh.Vertices[curMesh.Indices[3*j+1]].Position;
+				C = curMesh.Vertices[curMesh.Indices[3*j+2]].Position;
+				// in order to obtain the triangle (face) area, we must find the cross product of the vectors defining the triangle
+				U = B - A;
+				V = C - A;
+
+				// the cross product gives us the vector normal to the triangle (positive oriented)
+				objl::Vector3 R = objl::math::CrossV3(U,V);
+				faceNormal[j] = R;
+
+				// the magnitud of that vector is twice the area of the triangle
+				float faceArea[j] = objl::math::MagnitudeV3(R)/2;
+				// totalArea += faceArea[j];
+
+				// finally, for the angle we have: U.V = |U||V|.cos(angle)
+				objl::Vector3 UP(0,0,1);	// we create a base vector in Z+
+				faceAngle[j] = acos (objl::math::DotV3(UP,R) / (objl::math::MagnitudeV3(UP)*objl::math::MagnitudeV3(R)));
+				file << faceArea[j] << "\t" << faceAngle[j] << endl;
 			}
-
-			// Print Material
-			file << "Material: " << curMesh.MeshMaterial.name << "\n";
-			file << "Ambient Color: " << curMesh.MeshMaterial.Ka.X << ", " << curMesh.MeshMaterial.Ka.Y << ", " << curMesh.MeshMaterial.Ka.Z << "\n";
-			file << "Diffuse Color: " << curMesh.MeshMaterial.Kd.X << ", " << curMesh.MeshMaterial.Kd.Y << ", " << curMesh.MeshMaterial.Kd.Z << "\n";
-			file << "Specular Color: " << curMesh.MeshMaterial.Ks.X << ", " << curMesh.MeshMaterial.Ks.Y << ", " << curMesh.MeshMaterial.Ks.Z << "\n";
-			file << "Specular Exponent: " << curMesh.MeshMaterial.Ns << "\n";
-			file << "Optical Density: " << curMesh.MeshMaterial.Ni << "\n";
-			file << "Dissolve: " << curMesh.MeshMaterial.d << "\n";
-			file << "Illumination: " << curMesh.MeshMaterial.illum << "\n";
-			file << "Ambient Texture Map: " << curMesh.MeshMaterial.map_Ka << "\n";
-			file << "Diffuse Texture Map: " << curMesh.MeshMaterial.map_Kd << "\n";
-			file << "Specular Texture Map: " << curMesh.MeshMaterial.map_Ks << "\n";
-			file << "Alpha Texture Map: " << curMesh.MeshMaterial.map_d << "\n";
-			file << "Bump Map: " << curMesh.MeshMaterial.map_bump << "\n";
-
 			// Leave a space to separate from the next mesh
-			file << "\n";
+			file << endl;
 		}
 
-		// Close File
-		file.close();
+		file.close();		// Close File
 	}
 
-	// Exit the program
-	return 0;
+	return 0;	// exit without a hitch
 }

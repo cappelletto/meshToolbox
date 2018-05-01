@@ -116,7 +116,7 @@ namespace objl
 		// Float Multiplication Operator Overload
 		Vector3 operator*(const float& other) const
 		{
-			return Vector3(this->X *other, this->Y * other, this->Z - other);
+			return Vector3(this->X * other, this->Y * other, this->Z * other);
 		}
 
 		// Positional Variables
@@ -227,7 +227,7 @@ namespace objl
 		// Vector3 Magnitude Calculation
 		float MagnitudeV3(const Vector3 in)
 		{
-			return (sqrtf(powf(in.X, 2) + powf(in.Y, 2) + powf(in.Z, 2)));
+			return (sqrtf(in.X*in.X + in.Y*in.Y + in.Z*in.Z));
 		}
 
 		// Vector3 DotProduct
@@ -800,7 +800,7 @@ namespace objl
 		}
 
 		// Triangulate a list of vertices into a face by printing
-		//	inducies corresponding with triangles within it
+		//	indices corresponding with triangles within it
 		void VertexTriangulation(std::vector<unsigned int>& oIndices,
 			const std::vector<Vertex>& iVerts)
 		{
