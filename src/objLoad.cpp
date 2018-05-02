@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 /*	PARSER section */
     string descriptionString = \
     "objLoad - testing module part of meshToolbox, which loads and dumps an OBJ mesh file.\
-    Based on 3rd party OBJ-Load library (see README.md).";
+    Based on 3rd party OBJ-Load library (see https://github.com/Bly7).";
 
     argParser.Description(descriptionString);
     argParser.Epilog("Author: J. Cappelletto (cappelletto [at] gmail [dot] com)\nVisit [https://github.com/cappelletto] for more information\n");
