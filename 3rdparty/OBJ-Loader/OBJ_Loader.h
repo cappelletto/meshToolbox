@@ -118,6 +118,11 @@ namespace objl
 		{
 			return Vector3(this->X * other, this->Y * other, this->Z * other);
 		}
+		// Float Division Operator Overload
+		Vector3 operator/(const float& other) const
+		{
+			return Vector3(this->X / other, this->Y / other, this->Z / other);
+		}
 
 		// Positional Variables
 		float X;

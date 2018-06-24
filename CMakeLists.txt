@@ -10,7 +10,7 @@ add_compile_options(-std=c++11)
 
 # Source files
 set(MT_SOURCE_FILES
-    ${PROJECT_SOURCE_DIR}/src/objLoad.cpp
+    ${PROJECT_SOURCE_DIR}/src/meshAnalyze.cpp
 #    ${PROJECT_SOURCE_DIR}/src/System.cpp
 #    ${PROJECT_SOURCE_DIR}/src/Tracker.cpp
 )
@@ -24,7 +24,7 @@ include_directories(
 #$add_library(mt_library ${meshToolbox_SOURCE_FILES})
 
 # add an executable per target
-add_executable(objLoad ${MT_SOURCE_FILES})
+add_executable(meshAnalyze ${MT_SOURCE_FILES})
 
 # link required libraries
 #target_link_libraries(objLoad mt_library)
