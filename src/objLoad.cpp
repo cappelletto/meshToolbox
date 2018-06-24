@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    string InputFile = args::get(argInput);	//String containing the input file path+name from cvParser function
+    string InputFile = args::get(argInput);		//String containing the input file path+name from cvParser function
     string OutputFile = args::get(argOutput);	//String containing the output file template from cvParser function
 
     cout << "***************************************" << endl;
@@ -84,7 +84,7 @@ int main(int argc, char* argv[])
 		// Go through each loaded mesh and out its contents
 		for (int i = 0; i < Loader.LoadedMeshes.size(); i++)
 		{
-			// Copy one of the loaded meshes to be our current mesh
+			// Copy each one of the loaded meshes to be our current mesh
 			objl::Mesh curMesh = Loader.LoadedMeshes[i];
 			// Print Mesh Name
 			cout << "\tCurrent mesh: " << curMesh.MeshName << endl;
@@ -106,10 +106,12 @@ int main(int argc, char* argv[])
 			{
 				// faces are defined counter-clockwise
 				objl::Vector3 A, B, C, U, V;
+				// A B C are the vertex that define each triangle
 
 				A = curMesh.Vertices[curMesh.Indices[3*j]].Position;
 				B = curMesh.Vertices[curMesh.Indices[3*j+1]].Position;
 				C = curMesh.Vertices[curMesh.Indices[3*j+2]].Position;
+
 				// in order to obtain the triangle (face) area, we must find the cross product of the vectors defining the triangle
 				U = B - A;
 				V = C - A;
@@ -119,7 +121,7 @@ int main(int argc, char* argv[])
 				faceNormal[j] = R;
 
 				// the magnitud of that vector is twice the area of the triangle
-				float faceArea[j] = objl::math::MagnitudeV3(R)/2;
+				faceArea[j] = objl::math::MagnitudeV3(R)/2;
 				// totalArea += faceArea[j];
 
 				// finally, for the angle we have: U.V = |U||V|.cos(angle)
