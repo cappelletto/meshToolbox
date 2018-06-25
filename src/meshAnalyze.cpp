@@ -116,65 +116,12 @@ int main(int argc, char* argv[])
 			cout << "\t\tFaces: " << nFaces << endl;
 
 			// Create a vector that will contain the info for each face (triangle)
-			vector <float> 			faceArea(nFaces);
-			vector <objl::Vector3> 	faceNormal(nFaces);
-			vector <float> 			faceAngle(nFaces);
-			vector <objl::Vector3> 	faceCenter(nFaces);				
-			vector <int> 			faceFlag(nFaces);				
-
-			// offset vertex cloud to origin (0,0,0)
-			objl::Vector3 global_min, global_max;			
-			// we use the first point as the min/max for starting
-			global_min = global_max = curMesh.Vertices[0].Position;
-
-		//	***********************************************************
-		//	Find min/max of vertex
-			// we iterate across all the source vertex (it is faster if done before deduplicating vertex-face list)
-
-			for (int i=1; i < nVertex; i++)
-			{
-				objl::Vector3 currPoint = curMesh.Vertices[i].Position;
-
-				// update maximum values
-				if (currPoint.X > global_max.X)	global_max.X = currPoint.X;
-				if (currPoint.Y > global_max.Y)	global_max.Y = currPoint.Y;
-				if (currPoint.Z > global_max.Z)	global_max.Z = currPoint.Z;
-
-				// update minimum values
-				if (currPoint.X < global_min.X)	global_min.X = currPoint.X;
-				if (currPoint.Y < global_min.Y)	global_min.Y = currPoint.Y;
-				if (currPoint.Z < global_min.Z)	global_min.Z = currPoint.Z;
-			}
-			// at this point, the bounding box is defined by global_min and global_max vertex. 
-
-		//	***********************************************************
-		// Find bbox
-			// the upper limit of the bbox is given as the difference between the max and the min
-			// we use the first point as the min/max for starting
-			global_max = global_max - global_min;
-
-		//	***********************************************************
-		// Create grid X-Y
-			// for the grid creation, we use the size of the size of a XY cell and the bbox
-			//
-			cout << "Cell size: " << cellSize << endl;
-			int nx = ceil(global_max.X / cellSize);	
-				int ny = ceil(global_max.Y / cellSize);	
-
-			cout << "Bounding box: " << global_max.X << " " << global_max.Y << " " << global_max.Z << endl;   
-			cout << "Grid dimensions: " << nx << " x " << ny << endl;
-
-			// now we create the container matrix with the max height (Z) value for each cell. This does behave as a Digital Elevation Map
-			std::vector<std::vector<float>> DEM(nx, std::vector<float>(ny,0));
-
-		//	***********************************************************
-		//	Offset X-Y
-			// Now, we proceed to offset all the vertex according the minimum values of X, Y and Z, so the bbox will start from 0,0,0
-
-			for (int i=0; i < nVertex; i++)
-			{
-				curMesh.Vertices[i].Position = curMesh.Vertices[i].Position - global_min;				
-			}			
+			vector <float> 			faceArea(nFaces);	// area of current face
+			vector <objl::Vector3> 	faceNormal(nFaces);	// normal of current face
+			vector <float> 			faceAngle(nFaces);	// angle against normal of current face
+			vector <objl::Vector3> 	faceCenter(nFaces);	// center of current face
+			vector <float> 			faceDistance(nFaces);	// minimum distance to plane containing face
+			vector <int> 			faceFlag(nFaces, 0);	// flag indicating if face is occluded
 
 		//	***********************************************************
 		// For each face:
@@ -197,6 +144,8 @@ int main(int argc, char* argv[])
 				// the cross product gives us the vector normal to the triangle (positive oriented)
 				objl::Vector3 R = objl::math::CrossV3(U,V);
 				faceNormal[j] = R;
+				// find the free parameter D for the plane containing the current face
+				faceDistance[j] = objl::math::DotV3(A,R);
 
 				//	***********************************************************
 				// Compute face area
@@ -212,31 +161,66 @@ int main(int argc, char* argv[])
 
 				// find the center of the face (as the average of each corner vertex)
 				faceCenter[j] = (A + B + C)/3;
-				int cx,cy;
-				// find target cell in the XY grid for the resulting face center
-				cx = floor (faceCenter[j].X / cellSize);
-				cy = floor (faceCenter[j].Y / cellSize);
-				// if higher, update DEM value for given cell
-				if (faceCenter[j].Z > DEM[cx][cy]) DEM[cx][cy] = faceCenter[j].Z;				
+
 			}			
 
 			// Finally, after updating the DEM array, we can check each face to see if occlusion occurs
 
 		//	***********************************************************
 		// For each face:
-		// check if lower than Zmax - dZmax
-		// tag as covered or not
-			for (int j = 0; j < nFaces; j++)
+		// apply raytrace to see current j-face is occluded by any other k-face
+		// and tag it properly
+	
+		cout << "Computing raytrace for all faces" << endl;
+			// for raytracing, we see if rect P = O + t.R intersects inside k-face, defined in the plane form Ax + By + Cz + D = 0 
+			for (int j = 0; j < (nFaces-1); j++)
 			{
-				int cx,cy;
-				// find target cell in the XY grid for the resulting face center
-				cx = floor (faceCenter[j].X / cellSize);
-				cy = floor (faceCenter[j].Y / cellSize);
-				// if higher, update DEM value for given cell
-				// Check if it
-				if (faceCenter[j].Z < (DEM[cx][cy] - ToleranceZ)) 	faceFlag[j] = 0;	// completely covered
-				else if (faceCenter[j].Z < DEM[cx][cy])			faceFlag[j] = 1;	// almost covered
-				else											faceFlag[j] = 2;	// top
+				// P is defined as the center of the current j-face
+				objl::Vector3 O = faceCenter[j];
+
+				objl::Vector3 R;
+				R.X = R.Y = 0; R.Z = 1;	// normal vector pointing from the sky (Z = 0)
+
+				float t;
+				objl::Vector3 P;
+
+				for (int k = j+1; k < nFaces; k++)
+				{
+					// Imperative: discard if line and triangle are parallel, or there won't be any intersection
+					if (objl::math::DotV3(R,faceNormal[k]) != 0)
+					{
+						// For the current k-face employ its plane form. We already have its normal form, and the origin-distance parameter D
+						t = -(objl::math::DotV3(faceNormal[k], O) + faceDistance[k]) / (objl::math::DotV3(R, faceNormal[k]));
+						P = O + R*t;
+						// Given P, we must check if it lies within k-face
+						objl::Vector3 V1, V2, V3;
+						objl::Vector3 e1, e2, e3;
+						objl::Vector3 c1, c2, c3;
+
+						V1 = curMesh.Vertices[curMesh.Indices[3*k]].Position;
+						V2 = curMesh.Vertices[curMesh.Indices[3*k+1]].Position;
+						V3 = curMesh.Vertices[curMesh.Indices[3*k+2]].Position;
+
+						e1 = V2 - V1;
+						e2 = V3 - V2;
+						e3 = V1 - V3;
+
+						c1 = P - V1;
+						c2 = P - V2;
+						c3 = P - V3;
+
+						if ((objl::math::DotV3(faceNormal[k], objl::math::CrossV3(e1,c1)) > 0) &&
+						    (objl::math::DotV3(faceNormal[k], objl::math::CrossV3(e2,c2)) > 0) &&
+						    (objl::math::DotV3(faceNormal[k], objl::math::CrossV3(e3,c3)) > 0))
+							{
+								faceFlag[k] = 1;
+								break; // we exit from current loop, as this face is already tagged as "covered"
+							}
+//						else	faceFlag[k] = 0;
+
+					}
+				}
+				
 				file << faceCenter[j].X << "\t" << faceCenter[j].Y << "\t" << faceCenter[j].Z << "\t" << faceFlag[j] << endl;
 			}
 			// export data
