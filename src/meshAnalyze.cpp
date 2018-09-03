@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 
+#define OBJL_CONSOLE_OUTPUT
 // OBJ_Loader - .obj Loader
 #include "../3rdparty/OBJ-Loader/OBJ_Loader.h"
 #include "../include/meshAnalize.h"
@@ -92,142 +93,79 @@ int main(int argc, char* argv[])
 		cout << "Unable to open: " << InputFile << endl;
 		return -1;
 	}
-	// If so continue
-	else
+
+	// Create/Open OutputFile
+	std::ofstream file(OutputFile);
+	cout << "Number of meshes: " << Loader.LoadedMeshes.size() << endl; 
+
+	float totalArea = 0;
+
+	// Go through each loaded mesh and out its contents
+	for (int m = 0; m < Loader.LoadedMeshes.size(); m++)
 	{
-		// Create/Open OutputFile
-		std::ofstream file(OutputFile);
-		cout << "Number of meshes: " << Loader.LoadedMeshes.size() << endl; 
+		// Copy each one of the loaded meshes to be our current mesh
+		objl::Mesh curMesh = Loader.LoadedMeshes[m];
+		// Print Mesh Name
+//		cout << "Current mesh: " << curMesh.MeshName << endl;
+		// Print Vertices
+//		cout << "- Vertices: " << curMesh.Vertices.size() << endl;
 
-		// Go through each loaded mesh and out its contents
-		for (int m = 0; m < Loader.LoadedMeshes.size(); m++)
+		int nVertex = curMesh.Indices.size();
+		int nFaces = nVertex/3;
+
+		// Print Indices (number of faces)
+//		cout << "\tFaces: " << nFaces << endl;
+
+		// Create a vector that will contain the info for each face (triangle)
+		vector <float> 			faceArea(nFaces);	// area of current face
+		vector <objl::Vector3> 	faceNormal(nFaces);	// normal of current face
+		vector <float> 			faceAngle(nFaces);	// angle against normal of current face
+		vector <objl::Vector3> 	faceCenter(nFaces);	// center of current face
+		vector <float> 			faceDistance(nFaces);	// minimum distance to plane containing face
+		vector <int> 			faceFlag(nFaces, 0);	// flag indicating if face is occluded
+
+	//	***********************************************************
+	// For each face:
+		for (int j = 0; j < nFaces; j++)
 		{
-			// Copy each one of the loaded meshes to be our current mesh
-			objl::Mesh curMesh = Loader.LoadedMeshes[m];
-			// Print Mesh Name
-			cout << "\tCurrent mesh: " << curMesh.MeshName << endl;
-			// Print Vertices
-			cout << "\t\tVertices: " << curMesh.Vertices.size() << endl;
+			// faces are defined counter-clockwise
+			objl::Vector3 A, B, C, U, V;
+			// A B C are the vertex that define each triangle
+			// retrieve the corners of each face
+			A = curMesh.Vertices[curMesh.Indices[3*j]].Position;
+			B = curMesh.Vertices[curMesh.Indices[3*j+1]].Position;
+			C = curMesh.Vertices[curMesh.Indices[3*j+2]].Position;
 
-			int nVertex = curMesh.Indices.size();
-			int nFaces = nVertex/3;
+			// in order to obtain the triangle (face) area, we must find the cross product of the vectors defining the triangle
+			U = B - A;
+			V = C - A;
 
-			// Print Indices (number of faces)
-			cout << "\t\tFaces: " << nFaces << endl;
+			//	***********************************************************
+			// Compute face normal
+			// the cross product gives us the vector normal to the triangle (positive oriented)
+			objl::Vector3 R = objl::math::CrossV3(U,V);
+			faceNormal[j] = R;
+			// find the free parameter D for the plane containing the current face
+			faceDistance[j] = objl::math::DotV3(A,R);
 
-			// Create a vector that will contain the info for each face (triangle)
-			vector <float> 			faceArea(nFaces);	// area of current face
-			vector <objl::Vector3> 	faceNormal(nFaces);	// normal of current face
-			vector <float> 			faceAngle(nFaces);	// angle against normal of current face
-			vector <objl::Vector3> 	faceCenter(nFaces);	// center of current face
-			vector <float> 			faceDistance(nFaces);	// minimum distance to plane containing face
-			vector <int> 			faceFlag(nFaces, 0);	// flag indicating if face is occluded
+			//	***********************************************************
+			// Compute face area
+			// the magnitud of that vector is twice the area of the triangle
+			faceArea[j] = objl::math::MagnitudeV3(R)/2;
+		    totalArea += faceArea[j];
 
-		//	***********************************************************
-		// For each face:
-			for (int j = 0; j < nFaces; j++)
-			{
-				// faces are defined counter-clockwise
-				objl::Vector3 A, B, C, U, V;
-				// A B C are the vertex that define each triangle
-				// retrieve the corners of each face
-				A = curMesh.Vertices[curMesh.Indices[3*j]].Position;
-				B = curMesh.Vertices[curMesh.Indices[3*j+1]].Position;
-				C = curMesh.Vertices[curMesh.Indices[3*j+2]].Position;
-
-				// in order to obtain the triangle (face) area, we must find the cross product of the vectors defining the triangle
-				U = B - A;
-				V = C - A;
-
-				//	***********************************************************
-				// Compute face normal
-				// the cross product gives us the vector normal to the triangle (positive oriented)
-				objl::Vector3 R = objl::math::CrossV3(U,V);
-				faceNormal[j] = R;
-				// find the free parameter D for the plane containing the current face
-				faceDistance[j] = objl::math::DotV3(A,R);
-
-				//	***********************************************************
-				// Compute face area
-				// the magnitud of that vector is twice the area of the triangle
-				faceArea[j] = objl::math::MagnitudeV3(R)/2;
-				// totalArea += faceArea[j];
-
-				//	***********************************************************
-				// Compute face angle
-				// finally, for the angle we have: U.V = |U||V|.cos(angle)
-				objl::Vector3 UP(0,0,1);	// we create a base vector in Z+
-				faceAngle[j] = acos (objl::math::DotV3(UP,R) / (objl::math::MagnitudeV3(UP)*objl::math::MagnitudeV3(R)));
-
-				// find the center of the face (as the average of each corner vertex)
-				faceCenter[j] = (A + B + C)/3;
-
-			}			
-
-			// Finally, after updating the DEM array, we can check each face to see if occlusion occurs
-
-		//	***********************************************************
-		// For each face:
-		// apply raytrace to see current j-face is occluded by any other k-face
-		// and tag it properly
-	
-		cout << "Computing raytrace for all faces" << endl;
-			// for raytracing, we see if rect P = O + t.R intersects inside k-face, defined in the plane form Ax + By + Cz + D = 0 
-			for (int j = 0; j < (nFaces-1); j++)
-			{
-				// P is defined as the center of the current j-face
-				objl::Vector3 O = faceCenter[j];
-
-				objl::Vector3 R;
-				R.X = R.Y = 0; R.Z = 1;	// normal vector pointing from the sky (Z = 0)
-
-				float t;
-				objl::Vector3 P;
-
-				for (int k = j+1; k < nFaces; k++)
-				{
-					// Imperative: discard if line and triangle are parallel, or there won't be any intersection
-					if (objl::math::DotV3(R,faceNormal[k]) != 0)
-					{
-						// For the current k-face employ its plane form. We already have its normal form, and the origin-distance parameter D
-						t = -(objl::math::DotV3(faceNormal[k], O) + faceDistance[k]) / (objl::math::DotV3(R, faceNormal[k]));
-						P = O + R*t;
-						// Given P, we must check if it lies within k-face
-						objl::Vector3 V1, V2, V3;
-						objl::Vector3 e1, e2, e3;
-						objl::Vector3 c1, c2, c3;
-
-						V1 = curMesh.Vertices[curMesh.Indices[3*k]].Position;
-						V2 = curMesh.Vertices[curMesh.Indices[3*k+1]].Position;
-						V3 = curMesh.Vertices[curMesh.Indices[3*k+2]].Position;
-
-						e1 = V2 - V1;
-						e2 = V3 - V2;
-						e3 = V1 - V3;
-
-						c1 = P - V1;
-						c2 = P - V2;
-						c3 = P - V3;
-
-						if ((objl::math::DotV3(faceNormal[k], objl::math::CrossV3(e1,c1)) > 0) &&
-						    (objl::math::DotV3(faceNormal[k], objl::math::CrossV3(e2,c2)) > 0) &&
-						    (objl::math::DotV3(faceNormal[k], objl::math::CrossV3(e3,c3)) > 0))
-							{
-								faceFlag[k] = 1;
-								break; // we exit from current loop, as this face is already tagged as "covered"
-							}
-//						else	faceFlag[k] = 0;
-
-					}
-				}
-				
-				file << faceCenter[j].X << "\t" << faceCenter[j].Y << "\t" << faceCenter[j].Z << "\t" << faceFlag[j] << endl;
-			}
-			// export data
-
-		file.close();		// Close File
-		}
-	}	
-
+			//	***********************************************************
+			// Compute face angle
+			// finally, for the angle we have: U.V = |U||V|.cos(angle)
+			objl::Vector3 UP(0,0,1);	// we create a base vector in Z+
+			faceAngle[j] = acos (objl::math::DotV3(UP,R) / (objl::math::MagnitudeV3(UP)*objl::math::MagnitudeV3(R)));
+			// find the center of the face (as the average of each corner vertex)
+			faceCenter[j] = (A + B + C)/3;
+			file << faceArea[j] << "\t" << faceAngle[j]*180/3.141592 << "\t" << curMesh.MeshMaterial.Kd.X << endl;
+			cout << faceArea[j] << "\t" << faceAngle[j]*180/3.141592 << "\t" << curMesh.MeshMaterial.Kd.X << endl;
+		}			
+	}
+	cout << "Total Area: " << totalArea << endl; 
+	file.close();		// Close File
 	return 0;	// exit without a hitch
 }

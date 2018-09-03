@@ -9,6 +9,8 @@
 # Faces: 12
 #
 ####
+mtllib ./CUBE.obj.mtl
+
 vn 0.577350 0.577350 0.577350
 v 0.500000 0.500000 0.500000
 vn -0.333333 0.666667 0.666667
@@ -27,16 +29,28 @@ vn -0.577350 -0.577350 -0.577350
 v -0.500000 -0.500000 -0.500000
 # 8 vertices, 0 vertices normals
 
+
+usemtl material_0
 f 1//1 2//2 3//3
 f 4//4 3//3 2//2
+
+usemtl material_1
 f 1//1 3//3 5//5
 f 7//7 5//5 3//3
+
+usemtl material_2
 f 1//1 5//5 2//2
 f 6//6 2//2 5//5
+
+usemtl material_3
 f 8//8 6//6 7//7
 f 5//5 7//7 6//6
+
+usemtl material_4
 f 8//8 7//7 4//4
 f 3//3 4//4 7//7
+
+usemtl material_5
 f 8//8 4//4 6//6
 f 2//2 6//6 4//4
 # 12 faces, 0 coords texture

@@ -404,7 +404,8 @@ namespace objl
 			// If the file is not an .obj file return false
 			if (Path.substr(Path.size() - 4, 4) != ".obj")
 				return false;
-
+			
+			int numface = 0;
 
 			std::ifstream file(Path);
 
@@ -430,13 +431,14 @@ namespace objl
 			Mesh tempMesh;
 
 			#ifdef OBJL_CONSOLE_OUTPUT
-			const unsigned int outputEveryNth = 1000;
+			const unsigned int outputEveryNth = 1;
 			unsigned int outputIndicator = outputEveryNth;
 			#endif
 
 			std::string curline;
 			while (std::getline(file, curline))
 			{
+//				std::cout << algorithm::firstToken(curline) << " ";
 				#ifdef OBJL_CONSOLE_OUTPUT
 				if ((outputIndicator = ((outputIndicator + 1) % outputEveryNth)) == 1)
 				{
@@ -523,6 +525,7 @@ namespace objl
 				if (algorithm::firstToken(curline) == "vt")
 				{
 					std::vector<std::string> stex;
+
 					Vector2 vtex;
 					algorithm::split(algorithm::tail(curline), stex, " ");
 
@@ -547,6 +550,7 @@ namespace objl
 				// Generate a Face (vertices & indices)
 				if (algorithm::firstToken(curline) == "f")
 				{
+					std::cout << "f: " << numface++ << "\n";
 					// Generate the vertices
 					std::vector<Vertex> vVerts;
 					GenVerticesFromRawOBJ(vVerts, Positions, TCoords, Normals, curline);
@@ -577,6 +581,7 @@ namespace objl
 				// Get Mesh Material Name
 				if (algorithm::firstToken(curline) == "usemtl")
 				{
+
 					MeshMatNames.push_back(algorithm::tail(curline));
 
 					// Create new Mesh, if Material changes within a group
@@ -626,7 +631,6 @@ namespace objl
 						}
 					}
 
-
 					pathtomat += algorithm::tail(curline);
 
 					#ifdef OBJL_CONSOLE_OUTPUT
@@ -635,6 +639,9 @@ namespace objl
 
 					// Load Materials
 					LoadMaterials(pathtomat);
+					#ifdef OBJL_CONSOLE_OUTPUT
+					std::cout << "Materials loaded" << std::endl;
+					#endif
 				}
 			}
 
