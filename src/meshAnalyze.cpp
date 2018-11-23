@@ -1,10 +1,12 @@
 #include <iostream>
 #include <fstream>
 
+//TODO: complete documentation across all this file
+
 #define OBJL_CONSOLE_OUTPUT
 // OBJ_Loader - .obj Loader
 #include "../3rdparty/OBJ-Loader/OBJ_Loader.h"
-#include "../include/meshAnalize.h"
+#include "../include/meshAnalyze.h"
 
 using namespace std;
 
@@ -15,7 +17,7 @@ int main(int argc, char* argv[])
 //*********************************************************************************
 /*	PARSER section */
     string descriptionString = \
-    "meshAnalize - testing module part of meshToolbox, which loads OBJ mesh file, and further analize surface, occlusion, normal, angles, etc .\
+    "meshAnalyze - testing module part of meshToolbox, which loads OBJ mesh file and analyzes  its surface, occlusion, normal, angles, etc .\
     Based on 3rd party OBJ-Load library (see https://github.com/Bly7).";
 
     argParser.Description(descriptionString);
@@ -56,24 +58,6 @@ int main(int argc, char* argv[])
         cerr << "Use -h, --help command to see usage" << endl;
         return 1;
     }
-
-	float cellSize = 5;			//size of each grid cell. Default value: 5
-    if (argCellSize){
-		cellSize = args::get(argCellSize);			//size of each grid cell (square)
-    }
-	else
-	{
-		cout << "Using default value for cellSize = " << cellSize << endl;
-	}
-
-	float ToleranceZ = 1;			//Default value: 1
-    if (argToleranceZ){
-		ToleranceZ = args::get(argToleranceZ);		//value of height tolerance
-    }
-	else
-	{
-		cout << "Using default value for ToleranceZ = " << ToleranceZ << endl;
-	}
 
     string InputFile = args::get(argInput);		//String containing the input file path+name from cvParser function
     string OutputFile = args::get(argOutput);	//String containing the output file template from cvParser function

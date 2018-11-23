@@ -550,6 +550,7 @@ namespace objl
 				// Generate a Face (vertices & indices)
 				if (algorithm::firstToken(curline) == "f")
 				{
+					// EDIT: verbose output for current mesh face loading process
 					std::cout << "f: " << numface++ << "\n";
 					// Generate the vertices
 					std::vector<Vertex> vVerts;
